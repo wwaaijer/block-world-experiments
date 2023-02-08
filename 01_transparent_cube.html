@@ -1,0 +1,121 @@
+<html>
+  <body>
+    <canvas id="main"></canvas>
+    <script type="text/javascript">
+      const canvas = document.getElementById('main');
+      const ctx = canvas.getContext('2d');
+
+      const width = canvas.width;
+      const height = canvas.height;
+
+      const scale = 30;
+
+      let tilt = degToRad(35);
+      let rotation = degToRad(45);
+
+      function render() {
+        // Clear the canvas
+        canvas.width = width;
+
+        // Slowly change tilt or rotation based on time
+        if (Math.floor(Date.now() / 20 / 360) % 2) {
+          tilt = degToRad(Math.floor(Date.now() / 20) % 360 + 35);
+        } else {
+          rotation = degToRad(Math.floor(Date.now() / 20) % 360 + 45);
+        }
+
+        // Start drawing from bottom left corner to make thinking easier
+        ctx.translate(0, height);
+        ctx.scale(1, -1);
+
+        // Center the drawing
+        ctx.translate(Math.floor(width / 2), Math.floor(height / 2));
+
+        // Draw the axis indicator a bit to the left
+        ctx.translate(-2 * scale, 0);
+        
+        // X indicator
+        ctx.beginPath();
+        ctx.moveTo(...worldToScreen(0,0,0));
+        ctx.lineTo(...worldToScreen(1,0,0));
+        ctx.strokeStyle = 'blue';
+        ctx.stroke();
+
+        // Y indicator
+        ctx.beginPath();
+        ctx.moveTo(...worldToScreen(0,0,0));
+        ctx.lineTo(...worldToScreen(0,1,0));
+        ctx.strokeStyle = 'green';
+        ctx.stroke();
+
+        // Z indicator
+        ctx.beginPath();
+        ctx.moveTo(...worldToScreen(0,0,0));
+        ctx.lineTo(...worldToScreen(0,0,1));
+        ctx.strokeStyle = 'red';
+        ctx.stroke();
+
+        // Draw the actual cube a bit to the right
+        ctx.translate(4 * scale, 0);
+
+        // Draw from the center of the cube
+        ctx.translate(...worldToScreen(-0.5,-0.5,-0.5));
+
+        ctx.beginPath();
+
+        // Top of cube
+        ctx.moveTo(...worldToScreen(0,0,0));
+        ctx.lineTo(...worldToScreen(0,1,0));
+        ctx.lineTo(...worldToScreen(1,1,0));
+        ctx.lineTo(...worldToScreen(1,0,0));
+        ctx.lineTo(...worldToScreen(0,0,0));
+
+        // Bottom of cube
+        ctx.moveTo(...worldToScreen(0,0,1));
+        ctx.lineTo(...worldToScreen(0,1,1));
+        ctx.lineTo(...worldToScreen(1,1,1));
+        ctx.lineTo(...worldToScreen(1,0,1));
+        ctx.lineTo(...worldToScreen(0,0,1));
+
+        // Standing edges of cube
+        ctx.moveTo(...worldToScreen(0,1,0));
+        ctx.lineTo(...worldToScreen(0,1,1));
+        ctx.moveTo(...worldToScreen(1,1,0));
+        ctx.lineTo(...worldToScreen(1,1,1));
+        ctx.moveTo(...worldToScreen(1,0,0));
+        ctx.lineTo(...worldToScreen(1,0,1));
+        ctx.moveTo(...worldToScreen(0,0,0));
+        ctx.lineTo(...worldToScreen(0,0,1));
+
+        ctx.strokeStyle = 'black';
+        ctx.stroke();
+      }
+
+      function worldToScreen(x, y, z) {
+        const xX = x * Math.cos(rotation);
+        const yX = - y * Math.sin(rotation);
+        
+        const xY = x * Math.sin(tilt) * Math.sin(rotation);
+        const yY = y * Math.sin(tilt) * Math.cos(rotation);
+        const zY = z * Math.cos(tilt);
+
+        const xZ = x * Math.cos(tilt) * Math.sin(rotation);
+        const yZ = y * Math.cos(tilt) * Math.cos(rotation);
+        const zZ = - z * Math.sin(tilt);
+
+        const screenX = (xX + yX) * scale;
+        const screenY = (xY + yY + zY) * scale;
+        const screenZ = (xZ + yZ + zZ) * scale;
+
+        return [screenX, screenY, screenZ];
+      }
+
+      function degToRad(deg) {
+        return (deg / 360) * 2 * Math.PI;
+      }
+
+      setInterval(render, 20);
+
+    </script>
+  </body>
+</html>

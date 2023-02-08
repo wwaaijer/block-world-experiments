@@ -1,0 +1,275 @@
+<html>
+  <head>
+    <style>
+      body {
+        background-color: black;
+      }
+
+      #main {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="main"></canvas>
+    <script type="text/javascript">
+      const canvas = document.getElementById('main');
+      const ctx = canvas.getContext('2d');
+
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const scale = 30;
+
+      const DEG_90 = degToRad(90); 
+      const DEG_180 = degToRad(180);
+      const DEG_270 = degToRad(270); 
+      const DEG_360 = 2 * Math.PI;
+
+      // Colors are in HSL format
+      // Should not be have an L value lower then 10.
+      // Because cube borders are drawn slightly darker (L is decrease by 10).
+      const Color = {
+        leaves: [98,58,30],
+        grass: [87,47,37],
+        log: [44,65,30],
+      }
+
+      // Tree on a patch of grass!
+      const worldBlocks = [
+        { location: [-1,-1, 0], color: Color.grass },
+        { location: [ 0,-1, 0], color: Color.grass },
+        { location: [ 1,-1, 0], color: Color.grass },
+        { location: [-1, 0, 0], color: Color.grass },
+        { location: [ 0, 0, 0], color: Color.grass },
+        { location: [ 1, 0, 0], color: Color.grass },
+        { location: [-1, 1, 0], color: Color.grass },
+        { location: [ 0, 1, 0], color: Color.grass },
+        { location: [ 1, 1, 0], color: Color.grass },
+
+        { location: [ 0, 0, 1], color: Color.log },
+        { location: [ 0, 0, 2], color: Color.log },
+
+        { location: [-1,-1, 3], color: Color.leaves },
+        { location: [ 0,-1, 3], color: Color.leaves },
+        { location: [ 1,-1, 3], color: Color.leaves },
+        { location: [-1, 0, 3], color: Color.leaves },
+        { location: [ 0, 0, 3], color: Color.leaves },
+        { location: [ 1, 0, 3], color: Color.leaves },
+        { location: [-1, 1, 3], color: Color.leaves },
+        { location: [ 0, 1, 3], color: Color.leaves },
+        { location: [ 1, 1, 3], color: Color.leaves },
+
+        { location: [ 0,-1, 4], color: Color.leaves },
+        { location: [-1, 0, 4], color: Color.leaves },
+        { location: [ 0, 0, 4], color: Color.leaves },
+        { location: [ 1, 0, 4], color: Color.leaves },
+        { location: [ 0, 1, 4], color: Color.leaves },
+
+        { location: [ 0, 0, 5], color: Color.leaves },
+      ];
+
+      let tilt = degToRad(35);
+      let rotation = degToRad(10);
+      let xX,yX,xY,yY,zY,xZ,yZ,zZ;
+
+      function render() {
+        // Slowly change tilt and rotation based on time
+        if (degToRad((Date.now() / 200) % 40 > 20)) {
+          tilt = degToRad(60 - (Date.now() / 200) % 40);
+        } else {
+          tilt = degToRad((Date.now() / 200) % 40 + 20)
+        }
+        rotation = degToRad((Date.now() / 45) % 360);
+
+        // Precalculate the world to screen coordinate conversion values
+        xX = Math.cos(rotation); // How much screen X to add for world X
+        yX = - Math.sin(rotation); // How much screen X to add for world Y
+        
+        // How much screen Y to add for world ...
+        xY = Math.sin(tilt) * Math.sin(rotation);
+        yY = Math.sin(tilt) * Math.cos(rotation);
+        zY = Math.cos(tilt);
+
+        // How much screen Z to add for world ...
+        xZ = Math.cos(tilt) * Math.sin(rotation);
+        yZ = Math.cos(tilt) * Math.cos(rotation);
+        zZ = - Math.sin(tilt);
+
+        // Clear the canvas
+        canvas.width = width;
+
+        // Start the coordinate system from the bottom left corner to make thinking easier
+        ctx.translate(0, height);
+        ctx.scale(1, -1);
+
+        // Center the drawing
+        ctx.translate(Math.floor(width / 2), Math.floor(height / 2));
+        
+        // Target block 0,0,2 (move screen in opposite direction)
+        ctx.translate(...worldToScreen(0,0,-2));
+
+        // And from the center of the target block for a nice rotation
+        ctx.translate(...worldToScreen(-0.5,-0.5,-0.5));
+
+        // Sort blocks by screen Z location (back to front)
+        worldBlocks.sort((a, b) => (
+          worldToScreen(...b.location)[2] - worldToScreen(...a.location)[2]
+        ));
+
+        // Draw the world blocks
+        for (const worldBlock of worldBlocks) {
+          ctx.save();
+          ctx.translate(...worldToScreen(...worldBlock.location));
+          
+          drawCube(worldBlock.color);
+          
+          ctx.restore();
+        }
+        
+      }
+
+      function drawCube(color) {
+        //  Visualization of a cube (tilted 35 deg and rotated 45 deg)
+        //    with markers for the axis (XYZ)
+        //    and the cardinal directions (NESW)
+        //                          
+        //               .          
+        //          N         E     
+        //     .                   .
+        //          W         S     
+        //     .         Z         .
+        //               -          
+        //     Y         -         X
+        //          -    -    -     
+        //               0          
+        
+        // TODO: might be able to simplify with screen coords instead of rotation/tilt?
+
+        // 0 - 180 deg tilt
+        const topIsVisible = tilt < DEG_180;
+        // 90 - 270 deg tilt
+        const upSideDown = tilt >= DEG_90 && tilt < DEG_270;
+
+        // 0 - 180 deg rotation (quarter 1 and 2)
+        const rotationQ12 = rotation < DEG_180;
+        // 90 - 270 deg rotation (quarter 2 and 3)
+        const rotationQ23 = rotation >= DEG_90 && rotation < DEG_270;
+        
+        const northIsVisible = upSideDown ? !rotationQ23 : rotationQ23;
+        const westIsVisible = upSideDown ? !rotationQ12 : rotationQ12;
+
+        // Top face
+        if (topIsVisible)
+          drawCubeFace([0,0,1], [1,1,1], color);
+
+        // North face
+        if (northIsVisible)
+          drawCubeFace([0,1,0], [1,1,1], color);
+
+        // East face
+        if (!westIsVisible)
+          drawCubeFace([1,0,0], [1,1,1], color);
+
+        // South face
+        if (!northIsVisible)
+          drawCubeFace([0,0,0], [1,0,1], color);
+
+        // West face
+        if (westIsVisible)
+          drawCubeFace([0,0,0], [0,1,1], color);
+
+        // Bottom face
+        if (!topIsVisible)
+          drawCubeFace([0,0,0], [1,1,0], color);
+      } 
+
+      /**
+       * Expects only 2 axis to change between start and end.
+       * Will draw rectangle between those 2 points.
+       * Colored fill and a slightly black border.
+       * 
+       * @param {[number,number,number]} start
+       * @param {[number,number,number]} end
+       * @param {[number,number,number]} color
+       */
+      function drawCubeFace(start, end, color) {
+        const xDiff = start[0] !== end[0];
+        const yDiff = start[1] !== end[1];
+        const zDiff = start[2] !== end[2];
+
+        const current = [...start];
+
+        ctx.beginPath();
+        ctx.moveTo(...worldToScreen(...current));
+
+        if (xDiff) {
+          current[0] = end[0];
+          ctx.lineTo(...worldToScreen(...current));
+        }
+
+        if (yDiff) {
+          current[1] = end[1];
+          ctx.lineTo(...worldToScreen(...current));
+        }
+
+        if (zDiff) {
+          current[2] = end[2];
+          ctx.lineTo(...worldToScreen(...current));
+        }
+
+        if (xDiff) {
+          current[0] = start[0];
+          ctx.lineTo(...worldToScreen(...current));
+        }
+
+        if (yDiff) {
+          current[1] = start[1];
+          ctx.lineTo(...worldToScreen(...current));
+        }
+
+        if (zDiff) {
+          current[2] = start[2];
+          ctx.lineTo(...worldToScreen(...current));
+        }
+
+        ctx.fillStyle = `hsl(${color[0]}deg,${color[1]}%,${color[2]}%)`;
+        ctx.fill();
+        
+        ctx.strokeStyle = `hsl(${color[0]}deg,${color[1]}%,${color[2] - 10}%)`;
+        ctx.stroke();
+      }
+
+      function worldToScreen(x, y, z) {
+        const screenX = (x * xX + y * yX) * scale;
+        const screenY = (x * xY + y * yY + z * zY) * scale;
+        const screenZ = (x * xZ + y * yZ + z * zZ) * scale;
+
+        return [screenX, screenY, screenZ];
+      }
+
+      function degToRad(deg) {
+        let normalizedDeg = deg % 360;
+        
+        if (normalizedDeg < 0) {
+          normalizedDeg += 360;
+        }
+
+        return (normalizedDeg / 360) * 2 * Math.PI;
+      }
+
+      // render();
+      setInterval(render, 20);
+
+    </script>
+  </body>
+</html>

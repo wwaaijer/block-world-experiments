@@ -1,0 +1,43 @@
+<html>
+  <head>
+    <style>
+      body {
+        background-color: black;
+      }
+
+      #main {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        margin: 0;
+        padding: 0;
+      }
+
+      #tip {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        margin: 0;
+        padding: 10;
+        z-index: 2;
+        border-width: 1px;
+        border-style: solid;
+        border-color: white;
+        background-color: black;
+        color: white;
+        font-size: small;
+        font-family: monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="main"></canvas>
+    <div id="tip">
+      Click and drag to rotate the world.<br>
+      Hover the mouse over the cubes to trigger hit detection.
+    </div>
+    <script type="module" src="./src/main.mjs"></script>
+  </body>
+</html>

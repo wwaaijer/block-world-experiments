@@ -1,0 +1,221 @@
+<html>
+  <body>
+    <canvas id="main"></canvas>
+    <script type="text/javascript">
+      const canvas = document.getElementById('main');
+      const ctx = canvas.getContext('2d');
+
+      const width = canvas.width;
+      const height = canvas.height;
+
+      const scale = 30;
+
+      const DEG_90 = degToRad(90); 
+      const DEG_180 = degToRad(180);
+      const DEG_270 = degToRad(270); 
+      const DEG_360 = 2 * Math.PI;
+
+      let tilt = degToRad(35);
+      let rotation = degToRad(45);
+
+      function render() {
+        // Clear the canvas
+        canvas.width = width;
+
+        // Slowly change tilt or rotation based on time
+        if (Math.floor(Date.now() / 20 / 360) % 2) {
+          tilt = degToRad(Math.floor(Date.now() / 20) % 360 + 35);
+        } else {
+          rotation = degToRad(Math.floor(Date.now() / 20) % 360 + 45);
+        }
+
+        // Start drawing from bottom left corner to make thinking easier
+        ctx.translate(0, height);
+        ctx.scale(1, -1);
+
+        // Center the drawing
+        ctx.translate(Math.floor(width / 2), Math.floor(height / 2));
+
+        // Draw the axis indicator a bit to the left
+        ctx.translate(-2 * scale, 0);
+        
+        drawAxisIndicator();
+
+        // Draw the cube a bit to the right
+        ctx.translate(4 * scale, 0);
+        
+        // and from its center for nice rotation
+        ctx.translate(...worldToScreen(-0.5,-0.5,-0.5));
+
+        drawCube();
+      }
+
+      function drawAxisIndicator() {
+        // X indicator
+        ctx.beginPath();
+        ctx.moveTo(...worldToScreen(0,0,0));
+        ctx.lineTo(...worldToScreen(1,0,0));
+        ctx.strokeStyle = 'blue';
+        ctx.stroke();
+
+        // Y indicator
+        ctx.beginPath();
+        ctx.moveTo(...worldToScreen(0,0,0));
+        ctx.lineTo(...worldToScreen(0,1,0));
+        ctx.strokeStyle = 'green';
+        ctx.stroke();
+
+        // Z indicator
+        ctx.beginPath();
+        ctx.moveTo(...worldToScreen(0,0,0));
+        ctx.lineTo(...worldToScreen(0,0,1));
+        ctx.strokeStyle = 'red';
+        ctx.stroke();
+      }
+
+      function drawCube() {
+        //  Visualization of a cube (tilted 35 deg and rotated 45 deg)
+        //    with markers for the axis (XYZ)
+        //    and the cardinal directions (NESW)
+        //                          
+        //               .          
+        //          N         E     
+        //     .                   .
+        //          W         S     
+        //     .         Z         .
+        //               -          
+        //     Y         -         X
+        //          -    -    -     
+        //               0          
+        
+        // TODO: might be able to simplify with screen coords instead of rotation/tilt?
+
+        // 0 - 180 deg tilt
+        const topIsVisible = tilt < DEG_180;
+        // 90 - 270 deg tilt
+        const upSideDown = tilt >= DEG_90 && tilt < DEG_270;
+
+        // 0 - 180 deg rotation (quarter 1 and 2)
+        const rotationQ12 = rotation < DEG_180;
+        // 90 - 270 deg rotation (quarter 2 and 3)
+        const rotationQ23 = rotation >= DEG_90 && rotation < DEG_270;
+        
+        const northIsVisible = upSideDown ? !rotationQ23 : rotationQ23;
+        const westIsVisible = upSideDown ? !rotationQ12 : rotationQ12;
+
+        // Top face
+        if (topIsVisible)
+          drawCubeFace([0,0,1], [1,1,1], '#f00');
+
+        // North face
+        if (northIsVisible)
+          drawCubeFace([0,1,0], [1,1,1], '#ff0');
+
+        // East face
+        if (!westIsVisible)
+          drawCubeFace([1,0,0], [1,1,1], '#f0f');
+
+        // South face
+        if (!northIsVisible)
+          drawCubeFace([0,0,0], [1,0,1], '#00f');
+
+        // West face
+        if (westIsVisible)
+          drawCubeFace([0,0,0], [0,1,1], '#0f0');
+
+        // Bottom face
+        if (!topIsVisible)
+          drawCubeFace([0,0,0], [1,1,0], '#0ff');
+      } 
+
+      /**
+       * Expects only 2 axis to change between start and end.
+       * Will draw rectangle between those 2 points.
+       * Colored fill and a black border.
+       * 
+       * @param {[number,number,number]} start
+       * @param {[number,number,number]} end
+       * @param {string} color
+       */
+      function drawCubeFace(start, end, color) {
+        const xDiff = start[0] !== end[0];
+        const yDiff = start[1] !== end[1];
+        const zDiff = start[2] !== end[2];
+
+        const current = [...start];
+
+        ctx.beginPath();
+        ctx.moveTo(...worldToScreen(...current));
+
+        if (xDiff) {
+          current[0] = end[0];
+          ctx.lineTo(...worldToScreen(...current));
+        }
+
+        if (yDiff) {
+          current[1] = end[1];
+          ctx.lineTo(...worldToScreen(...current));
+        }
+
+        if (zDiff) {
+          current[2] = end[2];
+          ctx.lineTo(...worldToScreen(...current));
+        }
+
+        if (xDiff) {
+          current[0] = start[0];
+          ctx.lineTo(...worldToScreen(...current));
+        }
+
+        if (yDiff) {
+          current[1] = start[1];
+          ctx.lineTo(...worldToScreen(...current));
+        }
+
+        if (zDiff) {
+          current[2] = start[2];
+          ctx.lineTo(...worldToScreen(...current));
+        }
+
+        ctx.fillStyle = color;
+        ctx.fill();
+        
+        ctx.strokeStyle = 'black';
+        ctx.stroke();
+      }
+
+      function worldToScreen(x, y, z) {
+        const xX = x * Math.cos(rotation);
+        const yX = - y * Math.sin(rotation);
+        
+        const xY = x * Math.sin(tilt) * Math.sin(rotation);
+        const yY = y * Math.sin(tilt) * Math.cos(rotation);
+        const zY = z * Math.cos(tilt);
+
+        const xZ = x * Math.cos(tilt) * Math.sin(rotation);
+        const yZ = y * Math.cos(tilt) * Math.cos(rotation);
+        const zZ = - z * Math.sin(tilt);
+
+        const screenX = (xX + yX) * scale;
+        const screenY = (xY + yY + zY) * scale;
+        const screenZ = (xZ + yZ + zZ) * scale;
+
+        return [screenX, screenY, screenZ];
+      }
+
+      function degToRad(deg) {
+        let normalizedDeg = deg % 360;
+        
+        if (normalizedDeg < 0) {
+          normalizedDeg += 360;
+        }
+
+        return (normalizedDeg / 360) * 2 * Math.PI;
+      }
+
+      // render();
+      setInterval(render, 20);
+
+    </script>
+  </body>
+</html>
