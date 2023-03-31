@@ -46,6 +46,10 @@ export class WorldRenderer {
     this.hitDetection = new HitDetection(this);
   }
 
+  /**
+   * 
+   * @param {{location:[number, number, number], type: string}[]} worldBlocks 
+   */
   render(worldBlocks) {
     this.clearAndInitializeCanvas();
 
@@ -53,25 +57,38 @@ export class WorldRenderer {
       block.screenLocation = this.coords.worldToScreen(...block.location);
     });
 
-    worldBlocks.sort((a, b) => (b.screenLocation[2] - a.screenLocation[2]));
+    worldBlocks.sort((a, b) => (b.screenLocation[Z] - a.screenLocation[Z]));
 
-    for (const worldBlock of worldBlocks) {
-      this.blockRenderer.render(worldBlock);
+    const cameraTarget = [0,0,0];
+    const cameraTargetBlockCenter = true;
+    if (cameraTargetBlockCenter) {
+      cameraTarget[X] += 0.5;
+      cameraTarget[Y] += 0.5;
+      cameraTarget[Z] += 0.5;
     }
 
-    this.ctx.translate(...this.coords.worldToScreen(0, 0, 1));
+    const cameraScreenOffset = this.coords.worldToScreen(-cameraTarget[X], -cameraTarget[Y], -cameraTarget[Z]);
 
-    // TODO: properly normalize Mouse position
+    this.ctx.translate(...cameraScreenOffset);
+
+    // Loop over the blocks back to front for rendering
+    for (const block of worldBlocks) {
+      this.blockRenderer.render(block);
+    }
+
     const centerScreenCoord = [this.width/2, this.height/2];
-    const targetBlockCoord = this.coords.worldToScreen(-0.5, -0.5, -0.5);
     const mouseCoord = [
-      this.mouseX - centerScreenCoord[X] - targetBlockCoord[X],
-      this.mouseY - centerScreenCoord[Y] - targetBlockCoord[Y],
+      this.mouseX - centerScreenCoord[X] - cameraScreenOffset[X],
+      this.mouseY - centerScreenCoord[Y] - cameraScreenOffset[Y],
     ];
 
-    // TODO: loop over the blocks in reverse order
-    //    and extend hit detection to take in world block (coords) as well
-    this.hitDetection.detect(mouseCoord);
+    // Loop over the blocks front to back for hit detection
+    worldBlocks.reverse();
+    for (const block of worldBlocks) {
+      if (this.hitDetection.detect(mouseCoord, block.location) >= 0) {
+        break;
+      }
+    }
     
     // Indicate 0,0,0
     // this.drawRect([0, 0], 4, 'white');
@@ -95,17 +112,10 @@ export class WorldRenderer {
     // Clear the canvas
     this.canvas.width = this.width;
 
-    // Start the coordinate system from the bottom left corner to make thinking easier
-    this.ctx.translate(0, this.height);
-    this.ctx.scale(1, -1);
-
-    // Center the drawing
+    // Draw from center
     this.ctx.translate(Math.floor(this.width / 2), Math.floor(this.height / 2));
     
-    // Target block 0,0,2 (move screen in opposite direction)
-    this.ctx.translate(...this.coords.worldToScreen(0,0,-1));
-
-    // And from the center of the target block for a nice rotation
-    this.ctx.translate(...this.coords.worldToScreen(-0.5,-0.5,-0.5));
+    // Start the coordinate system from the bottom left corner to make thinking easier
+    this.ctx.scale(1, -1);
   }
 }

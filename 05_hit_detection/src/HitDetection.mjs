@@ -73,14 +73,24 @@ export class HitDetection {
   }
 
   /**
-   * @param {[number, number]} targetCoord 
+   * @param {[number, number]} mouseCoord 
    */
-  detect(targetCoord) {
+  detect(mouseCoord, blockCoord) {
+    this.worldRenderer.ctx.save();
+    this.worldRenderer.ctx.translate(...this.worldRenderer.coords.worldToScreen(...blockCoord));
+
+    const blockScreenCoord = this.worldRenderer.coords.worldToScreen(...blockCoord);
+    const relativeMouseCoord = [
+      mouseCoord[X] - blockScreenCoord[X],
+      mouseCoord[Y] - blockScreenCoord[Y],
+    ];
+
     for (let index = TOP; index <= BOTTOM; index ++) {
       if (
         this.sideDirectionIsVisible(sides[index].direction) &&
-        this.verticalSideCheck(sides[index].coords, targetCoord)
+        this.verticalSideCheck(sides[index].coords, relativeMouseCoord)
       ) {
+        this.worldRenderer.ctx.restore();
         return index;
       }
     }
@@ -88,11 +98,14 @@ export class HitDetection {
     for (let index = NORTH; index <= WEST; index ++) {
       if (
         this.sideDirectionIsVisible(sides[index].direction) &&
-        this.sideCheck(sides[index].coords, targetCoord)
+        this.sideCheck(sides[index].coords, relativeMouseCoord)
       ) {
+        this.worldRenderer.ctx.restore();
         return index;
       }
     }
+
+    this.worldRenderer.ctx.restore();
   }
 
   sideDirectionIsVisible(direction) {

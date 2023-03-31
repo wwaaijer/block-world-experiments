@@ -1,10 +1,12 @@
+import { X, Y, Z } from "./utils.mjs";
+
 // Colors are in HSL format
 // Should not be have an L value lower then 10.
 // Because cube borders are drawn slightly darker (L is decrease by 10).
 const Color = {
   leaves: [98,58,30],
-  grass: [87,47,37],
-  log: [44,65,30],
+  grass:  [87,47,37],
+  log:    [44,65,30],
 }
 
 export class BlockRenderer {
@@ -113,9 +115,9 @@ export class BlockRenderer {
   drawCubeFace(start, end, color) {
     const { ctx, coords } = this.worldRenderer;
 
-    const xDiff = start[0] !== end[0];
-    const yDiff = start[1] !== end[1];
-    const zDiff = start[2] !== end[2];
+    const xDiff = start[X] !== end[X];
+    const yDiff = start[Y] !== end[Y];
+    const zDiff = start[Z] !== end[Z];
   
     const current = [...start];
   
@@ -123,32 +125,32 @@ export class BlockRenderer {
     ctx.moveTo(...coords.worldToScreen(...current));
   
     if (xDiff) {
-      current[0] = end[0];
+      current[X] = end[X];
       ctx.lineTo(...coords.worldToScreen(...current));
     }
   
     if (yDiff) {
-      current[1] = end[1];
+      current[Y] = end[Y];
       ctx.lineTo(...coords.worldToScreen(...current));
     }
   
     if (zDiff) {
-      current[2] = end[2];
+      current[Z] = end[Z];
       ctx.lineTo(...coords.worldToScreen(...current));
     }
   
     if (xDiff) {
-      current[0] = start[0];
+      current[X] = start[X];
       ctx.lineTo(...coords.worldToScreen(...current));
     }
   
     if (yDiff) {
-      current[1] = start[1];
+      current[Y] = start[Y];
       ctx.lineTo(...coords.worldToScreen(...current));
     }
   
     if (zDiff) {
-      current[2] = start[2];
+      current[Z] = start[Z];
       ctx.lineTo(...coords.worldToScreen(...current));
     }
   
