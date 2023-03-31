@@ -1,0 +1,11 @@
+{
+  "name": "06_world_interaction",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "start": "npm exec live-server"
+  },
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  }
+}
