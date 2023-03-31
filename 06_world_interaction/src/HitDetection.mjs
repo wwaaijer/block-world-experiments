@@ -1,68 +1,6 @@
-import { BOTTOM, NORTH, TOP, WEST, X, Y, Z } from "./utils.mjs";
+import { sides } from "./sides.mjs";
+import { BOTTOM, EAST, NORTH, SOUTH, TOP, WEST, X, Y, Z } from "./utils.mjs";
 import { WorldRenderer } from "./WorldRenderer.mjs";
-
-const sides = [
-  // TOP
-  {
-    direction: [0,0,1],
-    coords: [
-      [0,0,1],
-      [1,0,1],
-      [1,1,1],
-      [0,1,1],
-    ]
-  },
-  // BOTTOM
-  {
-    direction: [0,0,-1],
-    coords: [
-      [0,0,0],
-      [1,0,0],
-      [1,1,0],
-      [0,1,0],
-    ]
-  },
-  // NORTH
-  {
-    direction: [0,1,0],
-    coords: [
-      [0,1,0],
-      [1,1,0],
-      [1,1,1],
-      [0,1,1],
-    ]
-  },
-  // EAST
-  {
-    direction: [1,0,0],
-    coords: [
-      [1,0,0],
-      [1,1,0],
-      [1,1,1],
-      [1,0,1],
-    ]
-  },
-  // SOUTH
-  {
-    direction: [0,-1,0],
-    coords: [
-      [0,0,0],
-      [1,0,0],
-      [1,0,1],
-      [0,0,1],
-    ]
-  },
-  // WEST
-  {
-    direction: [-1,0,0],
-    coords: [
-      [0,0,0],
-      [0,1,0],
-      [0,1,1],
-      [0,0,1],
-    ]
-  },
-]
 
 export class HitDetection {
   /** 
@@ -76,36 +14,29 @@ export class HitDetection {
    * @param {[number, number]} mouseCoord 
    */
   detect(mouseCoord, blockCoord) {
-    this.worldRenderer.ctx.save();
-    this.worldRenderer.ctx.translate(...this.worldRenderer.coords.worldToScreen(...blockCoord));
-
     const blockScreenCoord = this.worldRenderer.coords.worldToScreen(...blockCoord);
     const relativeMouseCoord = [
       mouseCoord[X] - blockScreenCoord[X],
       mouseCoord[Y] - blockScreenCoord[Y],
     ];
 
-    for (let index = TOP; index <= BOTTOM; index ++) {
+    for (const side of [TOP, BOTTOM]) {
       if (
-        this.sideDirectionIsVisible(sides[index].direction) &&
-        this.verticalSideCheck(sides[index].coords, relativeMouseCoord)
+        this.sideDirectionIsVisible(sides[side].direction) &&
+        this.verticalSideCheck(sides[side].coords, relativeMouseCoord)
       ) {
-        this.worldRenderer.ctx.restore();
-        return index;
+        return side;
       }
     }
 
-    for (let index = NORTH; index <= WEST; index ++) {
+    for (const side of [NORTH, EAST, SOUTH, WEST]) {
       if (
-        this.sideDirectionIsVisible(sides[index].direction) &&
-        this.sideCheck(sides[index].coords, relativeMouseCoord)
+        this.sideDirectionIsVisible(sides[side].direction) &&
+        this.sideCheck(sides[side].coords, relativeMouseCoord)
       ) {
-        this.worldRenderer.ctx.restore();
-        return index;
+        return side;
       }
     }
-
-    this.worldRenderer.ctx.restore();
   }
 
   sideDirectionIsVisible(direction) {
@@ -164,7 +95,7 @@ export class HitDetection {
       targetCoord[Y] > bottom &&
       targetCoord[Y] < top
     ) {
-      this.drawBoundingBox(top, right, bottom, left);
+      // We're in the bounding box, continue
     } else {
       return false;
     }
@@ -177,7 +108,6 @@ export class HitDetection {
       screenCoords[rightMost][Y] === top ||
       screenCoords[rightMost][Y] === bottom
     ) {
-      this.drawHitMarker(screenCoords);
       return true;
     }
 
@@ -185,29 +115,12 @@ export class HitDetection {
     const slopeLeftToTarget = slope(screenCoords[leftMost], targetCoord);
     const slopeRightToTarget = slope(screenCoords[rightMost], targetCoord);
 
-    // Draw side slopes
-    this.drawSlope(screenCoords[leftMost], slopeLeftTop, '#0b0');
-    this.drawSlope(screenCoords[leftMost], slopeLeftBottom, '#33b');
-    this.drawSlope(screenCoords[rightMost], slopeRightTop, '#0b0');
-    this.drawSlope(screenCoords[rightMost], slopeRightBottom, '#33f');
-
-    // Draw target slopes
-    this.drawSlope(screenCoords[leftMost], slopeLeftToTarget, '#b00');
-    this.drawSlope(screenCoords[rightMost], slopeRightToTarget, '#b00');
-
-    // Highlight corners
-    this.drawRect(screenCoords[topMost], 6, '#0b0');
-    this.drawRect(screenCoords[rightMost], 6, '#b0b');
-    this.drawRect(screenCoords[bottomMost], 6, '#00b');
-    this.drawRect(screenCoords[leftMost], 6, '#bb0');
-
     if (
       slopeLeftTop > slopeLeftToTarget  &&
       slopeLeftToTarget > slopeLeftBottom &&
       slopeRightBottom > slopeRightToTarget &&
       slopeRightToTarget > slopeRightTop
     ) {
-      this.drawHitMarker(screenCoords);
       return true;
     }
 
@@ -228,6 +141,7 @@ export class HitDetection {
     let bottom = screenCoords[0][Y];
     let left = screenCoords[0][X];
 
+    // Loop over each side to determine the
     for (let index = 1; index < 4; index ++) {
       const screenCoord = screenCoords[index];
 
@@ -279,106 +193,23 @@ export class HitDetection {
       targetCoord[Y] > bottom &&
       targetCoord[Y] < top
     ) {
-      this.drawBoundingBox(top, right, bottom, left);
+      // We're in the bounding box, continue
     } else {
       return false;
     }
-
-    // Draw side slopes
-    this.drawSlope(screenCoords[topLeft], topSlope, '#0b0');
-    this.drawSlope(screenCoords[bottomLeft], bottomSlope, '#33b');
 
     // Target slopes
     const slopeTopToTarget = slope(screenCoords[topLeft], targetCoord);
     const slopeBottomToTarget = slope(screenCoords[bottomLeft], targetCoord);
 
-    // Draw target slopes
-    this.drawSlope(screenCoords[topLeft], slopeTopToTarget, '#b00');
-    this.drawSlope(screenCoords[bottomLeft], slopeBottomToTarget, '#b00');
-
-    // Highlight detected corners
-    this.drawRect(screenCoords[topRight], 6, '#0b0');
-    this.drawRect(screenCoords[topLeft], 6, '#b0b');
-    this.drawRect(screenCoords[bottomRight], 6, '#00b');
-    this.drawRect(screenCoords[bottomLeft], 6, '#bb0');
-
     if (
       slopeTopToTarget < topSlope  &&
       slopeBottomToTarget > bottomSlope
     ) {
-      this.drawHitMarker(screenCoords);
       return true;
     }
 
     return false;
-  }
-
-  drawRect(screenCoord, size, fillStyle) {
-    const { ctx } = this.worldRenderer;
-
-    ctx.save();
-    if (fillStyle) {
-      ctx.fillStyle = fillStyle;
-    }
-
-    ctx.fillRect(
-      screenCoord[X] - size / 2,
-      screenCoord[Y] - size / 2,
-      size,
-      size,
-    );
-
-    if (fillStyle) {
-      ctx.restore();
-    }
-  }
-
-  drawSlope(screenCoord, slope, fillStyle) {
-    const { ctx } = this.worldRenderer;
-    const xTravel = slope === Infinity ? 0 : 100;
-    const yTravel = slope === Infinity ? 100 : xTravel * slope;
-
-    ctx.beginPath();
-
-    ctx.moveTo(screenCoord[X] - xTravel, screenCoord[Y] - yTravel);
-    ctx.lineTo(screenCoord[X] + xTravel, screenCoord[Y] + yTravel);
-
-    ctx.save();
-    ctx.strokeStyle = fillStyle;
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  drawBoundingBox(top, right, bottom, left) {
-    const { ctx } = this.worldRenderer;
-
-    ctx.beginPath()
-    ctx.moveTo(left, bottom)
-    ctx.lineTo(left, top)
-    ctx.lineTo(right, top)
-    ctx.lineTo(right, bottom)
-    ctx.closePath();
-
-    ctx.save();
-    ctx.strokeStyle = 'white';
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  drawHitMarker(screenCoords) {
-    const { ctx } = this.worldRenderer;
-
-    ctx.beginPath()
-    ctx.moveTo(...screenCoords[0])
-    ctx.lineTo(...screenCoords[1])
-    ctx.lineTo(...screenCoords[2])
-    ctx.lineTo(...screenCoords[3])
-    ctx.closePath();
-
-    ctx.save();
-    ctx.fillStyle = '#fff5';
-    ctx.fill();
-    ctx.restore();
   }
 }
 

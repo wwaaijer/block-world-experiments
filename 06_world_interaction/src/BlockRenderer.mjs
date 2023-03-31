@@ -1,4 +1,5 @@
 import { X, Y, Z } from "./utils.mjs";
+import { WorldRenderer } from "./WorldRenderer.mjs";
 
 // Colors are in HSL format
 // Should not be have an L value lower then 10.
@@ -10,6 +11,10 @@ const Color = {
 }
 
 export class BlockRenderer {
+  
+  /** 
+   * @param {WorldRenderer} worldRenderer 
+   */
   constructor(worldRenderer) {
     this.worldRenderer = worldRenderer;
   }
@@ -31,7 +36,54 @@ export class BlockRenderer {
   }
 
   drawBlock(block) {
-    this.drawCube(Color[block.type]);
+    if (block.type === 'preview') {
+      this.drawPreview();
+    } else {
+      this.drawCube(Color[block.type]);
+    }
+  }
+
+  drawPreview() {
+    const { ctx } = this.worldRenderer;
+    ctx.strokeStyle = 'white';
+
+    this.drawCorner([0,0,0]);
+    this.drawCorner([0,0,1]);
+    this.drawCorner([0,1,0]);
+    this.drawCorner([0,1,1]);
+    this.drawCorner([1,0,0]);
+    this.drawCorner([1,0,1]);
+    this.drawCorner([1,1,0]);
+    this.drawCorner([1,1,1]);
+  }
+
+  drawCorner(targetCoords) {
+    const { ctx, coords } = this.worldRenderer;
+    const [x, y, z] = targetCoords;
+    const targetScreenCoords = coords.worldToScreen(...targetCoords);
+
+    const lineXTarget = x === 1 ? 0.8 : 0.2;
+    const lineYTarget = y === 1 ? 0.8 : 0.2;
+    const lineZTarget = z === 1 ? 0.8 : 0.2;
+
+    const lineXScreenCoords = coords.worldToScreen(lineXTarget, y, z);
+    const lineYScreenCoords = coords.worldToScreen(x, lineYTarget, z);
+    const lineZScreenCoords = coords.worldToScreen(x, y, lineZTarget);
+
+    ctx.beginPath();
+    ctx.moveTo(...targetScreenCoords);
+    ctx.lineTo(...lineXScreenCoords);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(...targetScreenCoords);
+    ctx.lineTo(...lineYScreenCoords);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(...targetScreenCoords);
+    ctx.lineTo(...lineZScreenCoords);
+    ctx.stroke();
   }
 
   drawCube(color) {
@@ -69,17 +121,11 @@ export class BlockRenderer {
     // Top face
     if (topIsVisible) {
       this.drawCubeFace([0,0,1], [1,1,1], color);
-      const topIndicator = this.worldRenderer.coords.worldToScreen(...[0.5,0.5,1]);
-      this.worldRenderer.ctx.fillStyle = 'red';
-      this.worldRenderer.ctx.fillRect(topIndicator[0] - 2, topIndicator[1] - 2, 4, 4);
     }
   
     // North face
     if (northIsVisible){
       this.drawCubeFace([0,1,0], [1,1,1], color);
-      const northIndicator = this.worldRenderer.coords.worldToScreen(...[0.5,1,0.5]);
-      this.worldRenderer.ctx.fillStyle = 'white';
-      this.worldRenderer.ctx.fillRect(northIndicator[0] - 2, northIndicator[1] - 2, 4, 4);
     }
   
     // East face
@@ -97,9 +143,6 @@ export class BlockRenderer {
     // Bottom face
     if (!topIsVisible) {
       this.drawCubeFace([0,0,0], [1,1,0], color);
-      const bottomIndicator = this.worldRenderer.coords.worldToScreen(...[0.5,0.5,0]);
-      this.worldRenderer.ctx.fillStyle = 'blue';
-      this.worldRenderer.ctx.fillRect(bottomIndicator[0] - 2, bottomIndicator[1] - 2, 4, 4);
     }
   } 
   

@@ -1,7 +1,9 @@
+import { worldBlocks } from "./worldBlocks.mjs";
 import { BlockRenderer } from "./BlockRenderer.mjs";
 import { CoordsConverter, normalizeDeg } from "./CoordsConverter.mjs";
 import { HitDetection } from "./HitDetection.mjs";
-import { X, Y, Z } from "./utils.mjs";
+import { sides } from "./sides.mjs";
+import { coordSum, X, Y, Z } from "./utils.mjs";
 
 export class WorldRenderer {
   rotation;
@@ -39,6 +41,19 @@ export class WorldRenderer {
     this.canvas.addEventListener('mousemove', (e) => {
       this.mouseX = e.clientX * window.devicePixelRatio;
       this.mouseY = this.height - e.clientY * window.devicePixelRatio;
+    });
+
+    // TODO: move to outside of this class plz
+    this.targetMouseBlock;
+    this.targetMouseBlockSide;
+    this.canvas.addEventListener('click', (e) => {
+      // TODO: Long drag also counts as click
+      if (this.targetMouseBlock) {
+        worldBlocks.push({
+          location: coordSum(this.targetMouseBlock.location, sides[this.targetMouseBlockSide].direction),
+          type: this.targetMouseBlock.type,
+        })
+      }
     });
 
     this.coords = new CoordsConverter();
@@ -84,14 +99,24 @@ export class WorldRenderer {
 
     // Loop over the blocks front to back for hit detection
     worldBlocks.reverse();
+    // TODO: Expose the mouse block stuff to the outside of this class. Events?
+    delete this.targetMouseBlock;
+    delete this.targetMouseBlockSide;
     for (const block of worldBlocks) {
-      if (this.hitDetection.detect(mouseCoord, block.location) >= 0) {
+      const sideHit = this.hitDetection.detect(mouseCoord, block.location);
+      if (sideHit >= 0) {
+        this.targetMouseBlock = block;
+        this.targetMouseBlockSide = sideHit;
+        // Show preview
+        // TODO: This now renders above very thing else.
+        //    Add this to the world as a non interactive block?
+        this.blockRenderer.render({
+          location: coordSum(block.location, sides[sideHit].direction),
+          type: 'preview',
+        });
         break;
       }
     }
-    
-    // Indicate 0,0,0
-    // this.drawRect([0, 0], 4, 'white');
   }
 
   setRotation(rotation, tilt) {
